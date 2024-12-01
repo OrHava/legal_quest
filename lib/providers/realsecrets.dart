@@ -1,0 +1,1 @@
+var mySecretKey = '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';
