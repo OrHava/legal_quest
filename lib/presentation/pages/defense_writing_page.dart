@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:printing/printing.dart';
 import 'dart:convert';
@@ -7,7 +8,6 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../../generated/l10n.dart';
 import '../../providers/realsecrets.dart';
-import '../widgets/ad_widget.dart';
 
 class DefensePage extends StatefulWidget {
   const DefensePage({super.key});
@@ -137,31 +137,51 @@ ${S.of(context).ensure_defense}
       });
     }
   }
-
-  void _downloadDefenseAsPDF() async {
-    if (_generatedDefense.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('No defense to download. Generate it first!'),
+void _downloadDefenseAsPDF() async {
+  if (_generatedDefense.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No contract to download'), // Replace with localization if needed
         backgroundColor: Colors.orange,
-      ));
-      return;
-    }
-
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) => pw.Padding(
-          padding: const pw.EdgeInsets.all(16.0),
-          child: pw.Text(_generatedDefense),
-        ),
       ),
     );
-
-    await Printing.sharePdf(
-      bytes: await pdf.save(),
-      filename: 'defense.pdf',
-    );
+    return;
   }
+
+  // Function to check if the text contains Hebrew characters
+  bool isHebrew(String text) {
+    return RegExp(r'[\u0590-\u05FF]').hasMatch(text);
+  }
+
+  // Load Hebrew font only if necessary
+  final pdf = pw.Document();
+  pw.Font? font;
+  pw.TextDirection textDirection = pw.TextDirection.ltr;
+
+  if (isHebrew(_generatedDefense)) {
+      font = pw.Font.ttf(await rootBundle.load('assets/NotoSansHebrew-Regular.ttf'));
+    textDirection = pw.TextDirection.rtl; // Set text direction to RTL for Hebrew
+  }
+
+  pdf.addPage(
+    pw.Page(
+      build: (pw.Context context) => pw.Padding(
+        padding: const pw.EdgeInsets.all(16.0),
+        child: pw.Text(
+          _generatedDefense,
+          textDirection: textDirection,
+          style: font != null ? pw.TextStyle(font: font) : const pw.TextStyle(),
+        ),
+      ),
+    ),
+  );
+
+  await Printing.sharePdf(
+    bytes: await pdf.save(),
+    filename: 'defense.pdf',
+  );
+}
+  
 
   String? _requiredValidator(String? value) {
     if (value == null || value.isEmpty) {
@@ -191,7 +211,7 @@ ${S.of(context).ensure_defense}
           prefixIcon: Icon(icon, color: Colors.white70),
           labelStyle: GoogleFonts.poppins(color: Colors.white70, fontSize: 16),
           filled: true,
-          fillColor: Colors.white.withOpacity(0.1),
+          fillColor: Colors.white.withAlpha(10),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -317,7 +337,7 @@ Widget _buildExampleDropdown() {
   return Container(
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(12),
-      color: Colors.white.withOpacity(0.1),
+      color: Colors.white.withAlpha(10),
     ),
     child: DropdownButtonFormField<String>(
       decoration: InputDecoration(
@@ -447,7 +467,7 @@ Widget _buildExampleButton() {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16.0),
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withAlpha(10),
         ),
         child: TextFormField(
           initialValue: _generatedDefense,
@@ -461,7 +481,7 @@ Widget _buildExampleButton() {
             border: InputBorder.none,
             hintText:    S.of(context).edit_contract_hint,
             hintStyle: GoogleFonts.poppins(
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withAlpha(50),
             ),
           ),
           onChanged: (value) {

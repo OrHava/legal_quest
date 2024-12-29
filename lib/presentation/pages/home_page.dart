@@ -281,7 +281,7 @@ if (isDesktop(context)) {
     PopupMenuButton<int>(
       icon: const Icon(Icons.menu, color: Colors.white),
       onSelected: _scrollToSection,
-      color: Colors.black.withOpacity(0.9),
+      color: Colors.black.withAlpha(90),
       elevation: 8,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -484,7 +484,7 @@ void _scrollToSection(int index) {
                 ),
               ),
             ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-              .shimmer(duration: 2.seconds, color: Colors.white.withOpacity(0.7)),
+              .shimmer(duration: 2.seconds, color: Colors.white.withAlpha(70)),
             AnimatedContainer(
               duration: const Duration(milliseconds: 200), // Duration for the underline animation
               margin: const EdgeInsets.only(top: 4),
@@ -554,7 +554,7 @@ Widget _buildRowSection(String title, Widget content, bool isDesktop) {
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(30),
     ),
-    color: Colors.black.withOpacity(0.75),
+    color: Colors.black.withAlpha(75),
     child: Padding(
       padding: const EdgeInsets.all(25),
       child: isDesktop
@@ -724,7 +724,7 @@ Widget _buildSectionTitle(String title, bool isDesktop) {
       shadows: [
         Shadow(
           blurRadius: 10.0,
-          color: Colors.black.withOpacity(0.3),
+          color: Colors.black.withAlpha(30),
           offset: const Offset(2.0, 2.0),
         ),
       ],

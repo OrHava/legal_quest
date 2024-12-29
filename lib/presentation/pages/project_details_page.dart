@@ -52,7 +52,7 @@ class ProjectDetailsPage extends StatelessWidget {
               onPlay: (controller) => controller.repeat(reverse: true),
             ).shimmer(
               duration: 3.seconds,
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withAlpha(10),
             ),
           ),
           // Star particles in background
@@ -88,7 +88,7 @@ class ProjectDetailsPage extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(15),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
+                                    color: Colors.black.withAlpha(20),
                                     spreadRadius: 1,
                                     blurRadius: 5,
                                     offset: const Offset(0, 2),
@@ -220,7 +220,7 @@ class AnimatedParticles extends StatelessWidget {
               width: 5,
               height: 5,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withAlpha(50),
                 shape: BoxShape.circle,
               ),
             ).animate(
@@ -252,9 +252,9 @@ class GlassContainer extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withAlpha(10),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
+            border: Border.all(color: Colors.white.withAlpha(20)),
           ),
           child: child,
         ),

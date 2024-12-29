@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:pdf/widgets.dart' as pw;
@@ -7,7 +8,6 @@ import '../../generated/l10n.dart';
 import '../../providers/realsecrets.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../widgets/ad_widget.dart';
 
 
 
@@ -118,31 +118,51 @@ ${_detailsController.text}
 ${S.of(context).ensure_contract}
 ''';
   }
-
-  void _downloadContractAsPDF() async {
-    if (_generatedContract.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar( SnackBar(
-        content: Text(S.of(context).no_contract_to_download),
+void _downloadContractAsPDF() async {
+  if (_generatedContract.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No contract to download'), // Replace with localization if needed
         backgroundColor: Colors.orange,
-      ));
-      return;
-    }
-
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) => pw.Padding(
-          padding: const pw.EdgeInsets.all(16.0),
-          child: pw.Text(_generatedContract),
-        ),
       ),
     );
-
-    await Printing.sharePdf(
-      bytes: await pdf.save(),
-      filename: 'contract.pdf',
-    );
+    return;
   }
+
+  // Function to check if the text contains Hebrew characters
+  bool isHebrew(String text) {
+    return RegExp(r'[\u0590-\u05FF]').hasMatch(text);
+  }
+
+  // Load Hebrew font only if necessary
+  final pdf = pw.Document();
+  pw.Font? font;
+  pw.TextDirection textDirection = pw.TextDirection.ltr;
+
+  if (isHebrew(_generatedContract)) {
+      font = pw.Font.ttf(await rootBundle.load('assets/NotoSansHebrew-Regular.ttf'));
+    textDirection = pw.TextDirection.rtl; // Set text direction to RTL for Hebrew
+  }
+
+  pdf.addPage(
+    pw.Page(
+      build: (pw.Context context) => pw.Padding(
+        padding: const pw.EdgeInsets.all(16.0),
+        child: pw.Text(
+          _generatedContract,
+          textDirection: textDirection,
+          style: font != null ? pw.TextStyle(font: font) : const pw.TextStyle(),
+        ),
+      ),
+    ),
+  );
+
+  await Printing.sharePdf(
+    bytes: await pdf.save(),
+    filename: 'contract.pdf',
+  );
+}
+
 
 List<Map<String, String>> getExamples(BuildContext context) {
     return [
@@ -269,7 +289,7 @@ Widget _buildExampleDropdown() {
   return Container(
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(12),
-      color: Colors.white.withOpacity(0.1),
+      color: Colors.white.withAlpha(10),
     ),
     child: DropdownButtonFormField<String>(
       decoration: InputDecoration(
@@ -534,14 +554,14 @@ Widget _buildTextField({
         labelStyle: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.white70),
         prefixIcon: Icon(icon, color: Colors.white70),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.1),
+        fillColor: Colors.white.withAlpha(10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3), width: 2.0),
+          borderSide: BorderSide(color: Colors.white.withAlpha(30), width: 2.0),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
@@ -607,7 +627,7 @@ Widget _buildGenerateButton(BuildContext context) {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16.0),
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withAlpha(10),
           ),
           child: TextFormField(
             initialValue: _generatedContract,
@@ -621,7 +641,7 @@ Widget _buildGenerateButton(BuildContext context) {
               border: InputBorder.none,
               hintText:  S.of(context).edit_contract_hint,
               hintStyle: GoogleFonts.poppins(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white..withAlpha(50),
               ),
             ),
             onChanged: (value) {

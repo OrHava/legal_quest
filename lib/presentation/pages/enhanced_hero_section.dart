@@ -146,8 +146,8 @@ class EnhancedHeroSectionState extends State<EnhancedHeroSection> with SingleTic
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(50),
-      splashColor: Colors.white.withOpacity(0.2),
-      highlightColor: Colors.white.withOpacity(0.1),
+      splashColor: Colors.white..withAlpha(20),
+      highlightColor: Colors.white.withAlpha(10),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         decoration: BoxDecoration(
@@ -159,18 +159,18 @@ class EnhancedHeroSectionState extends State<EnhancedHeroSection> with SingleTic
           borderRadius: BorderRadius.circular(50),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withAlpha(20),
               blurRadius: 15,
               spreadRadius: 2,
             ),
             BoxShadow(
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.white.withAlpha(30),
               blurRadius: 5,
               spreadRadius: 1,
             ),
           ],
           border: Border.all(
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withAlpha(30),
             width: 1.5,
           ),
         ),

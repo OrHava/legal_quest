@@ -101,7 +101,7 @@ Color _getStarColor() {
       Colors.teal,
       Colors.green,
     ];
-    return colors[random.nextInt(colors.length)].withOpacity(0.1);
+    return colors[random.nextInt(colors.length)].withAlpha(10);
   }
 
   Path _generateNebulaShape() {
@@ -145,7 +145,7 @@ Color _getStarColor() {
         radius: 1.0,
         colors: [
           nebula.color,
-          nebula.color.withOpacity(0.0),
+          nebula.color,
         ],
       );
       final rect = Rect.fromCircle(center: center, radius: radius);
@@ -178,9 +178,9 @@ Color _getStarColor() {
     // Create a radial gradient for the star
     final gradient = RadialGradient(
       colors: [
-        star.color.withOpacity(brightness),
-        star.color.withOpacity(brightness * 0.5),
-        star.color.withOpacity(0),
+        star.color.withAlpha(brightness.toInt()),
+        star.color.withAlpha((brightness * 0.5).toInt()),
+        star.color.withAlpha(0),
       ],
       stops: const [0.0, 0.5, 1.0],
     );
@@ -197,7 +197,7 @@ Color _getStarColor() {
 
     // Add a small glow effect
     final glowPaint = Paint()
-      ..color = star.color.withOpacity(brightness * 0.2)
+      ..color = star.color.withAlpha((brightness * 0.2).toInt())
       ..style = PaintingStyle.fill
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, star.size * scale);
 
@@ -343,8 +343,8 @@ class SpaceBackgroundPainter2 extends CustomPainter {
     }
 
     // Add some colored "nebulas"
-    _drawNebula(canvas, size, Colors.purple.withOpacity(0.1), random);
-    _drawNebula(canvas, size, Colors.blue.withOpacity(0.1), random);
+    _drawNebula(canvas, size, Colors.purple.withAlpha(10), random);
+    _drawNebula(canvas, size, Colors.blue.withAlpha(10), random);
   }
 
   void _drawNebula(Canvas canvas, Size size, Color color, Random random) {

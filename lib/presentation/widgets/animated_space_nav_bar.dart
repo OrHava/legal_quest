@@ -79,7 +79,7 @@ class StarPainter extends CustomPainter {
 
     for (var star in stars) {
       final opacity = (sin(animationValue * 2 * pi + star.x * 10) + 1) / 2;
-      paint.color = Colors.white.withOpacity(0.3 + opacity * 0.7);
+      paint.color = Colors.white.withAlpha((0.3 + opacity * 0.7).toInt());
       
       canvas.drawCircle(
         Offset(star.x * size.width, star.y * size.height),
@@ -109,7 +109,7 @@ class SignatureBrandName extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: ShaderMask(
               shaderCallback: (bounds) => LinearGradient(
-                colors: [Colors.white, Colors.white.withOpacity(0.9)],
+                colors: [Colors.white, Colors.white.withAlpha(90)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ).createShader(bounds),
@@ -127,7 +127,7 @@ class SignatureBrandName extends StatelessWidget {
                     shadows: [
                       Shadow(
                         blurRadius: 4.0,
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withAlpha(30),
                         offset: const Offset(2.0, 2.0),
                       ),
                     ],
@@ -147,7 +147,7 @@ class SignaturePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
+      ..color = Colors.white.withAlpha(50)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0  // Slightly thicker stroke for a bolder look
       ..strokeCap = StrokeCap.round;
