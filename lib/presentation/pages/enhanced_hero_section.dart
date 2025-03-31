@@ -109,8 +109,8 @@ class EnhancedHeroSectionState extends State<EnhancedHeroSection> with SingleTic
   Widget _buildActionButtons() {
     return Container(
       color: Colors.transparent,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _buildLawButton(
             onPressed: () => _onActionButtonPressed('contract'),
@@ -118,14 +118,14 @@ class EnhancedHeroSectionState extends State<EnhancedHeroSection> with SingleTic
             icon: Icons.file_copy_outlined,
             colors: [Colors.white, Colors.blue.shade900],
           ),
-          Container(height: 40,),
+          Container(width: 40,),
           _buildLawButton(
             onPressed: () => _onActionButtonPressed('lawsuit'),
             text:  S.of(context).create_lawsuit,
             icon: Icons.gavel,
             colors: [Colors.white, Colors.deepOrange.shade900],
           ),
-                 Container(height: 40,),
+                 Container(width: 40,),
           _buildLawButton(
             onPressed: () => _onActionButtonPressed('defense'),
             text:  S.of(context).create_defense,
@@ -136,64 +136,63 @@ class EnhancedHeroSectionState extends State<EnhancedHeroSection> with SingleTic
       ),
     );
   }
-
-  Widget _buildLawButton({
-    required VoidCallback onPressed,
-    required String text,
-    required IconData icon,
-    required List<Color> colors,
-  }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(50),
-      splashColor: Colors.white..withAlpha(20),
-      highlightColor: Colors.white.withAlpha(10),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: colors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(50),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(20),
-              blurRadius: 15,
-              spreadRadius: 2,
-            ),
-            BoxShadow(
-              color: Colors.white.withAlpha(30),
-              blurRadius: 5,
-              spreadRadius: 1,
-            ),
-          ],
-          border: Border.all(
-            color: Colors.white.withAlpha(30),
-            width: 1.5,
-          ),
+Widget _buildLawButton({
+  required VoidCallback onPressed,
+  required String text,
+  required IconData icon,
+  required List<Color> colors,
+}) {
+  return InkWell(
+    onTap: onPressed,
+    borderRadius: BorderRadius.circular(8),  // Reduced curvature
+    splashColor: Colors.white.withAlpha(20),
+    highlightColor: Colors.white.withAlpha(10),
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 36),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 28),
-            const SizedBox(width: 12),
-            Text(
-              text,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ],
+        borderRadius: BorderRadius.circular(8),  // Reduced curvature
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(20),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+          BoxShadow(
+            color: Colors.white.withAlpha(30),
+            blurRadius: 5,
+            spreadRadius: 1,
+          ),
+        ],
+        border: Border.all(
+          color: Colors.white.withAlpha(30),
+          width: 1.5,
         ),
       ),
-    );
-  }
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 36),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 28),
+          const SizedBox(width: 12),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
   Widget _buildAnimatedTitle(bool isDesktop) {
     return AnimatedTitleWidget(isDesktop: isDesktop);

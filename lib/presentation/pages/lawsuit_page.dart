@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';import 'package:pdf/widgets.dart' as pw;
 
 import '../../generated/l10n.dart';
@@ -94,7 +95,7 @@ List<Map<String, String>> getExamples(BuildContext context) {
               'content': _buildPrompt()
             },
           ],
-          'max_tokens': 1000,
+          'max_tokens': 4096,
         }),
  )
       );
@@ -145,38 +146,74 @@ void _downloadLawsuitAsPDF() async {
   if (_generatedLawsuit.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('No contract to download'), // Replace with localization if needed
+        content: Text('No contract to download'),
         backgroundColor: Colors.orange,
       ),
     );
     return;
   }
 
-  // Function to check if the text contains Hebrew characters
   bool isHebrew(String text) {
     return RegExp(r'[\u0590-\u05FF]').hasMatch(text);
   }
 
-  // Load Hebrew font only if necessary
   final pdf = pw.Document();
-  pw.Font? font;
+  pw.Font? regularFont;
+  pw.Font? boldFont;
   pw.TextDirection textDirection = pw.TextDirection.ltr;
 
   if (isHebrew(_generatedLawsuit)) {
-      font = pw.Font.ttf(await rootBundle.load('assets/NotoSansHebrew-Regular.ttf'));
-    textDirection = pw.TextDirection.rtl; // Set text direction to RTL for Hebrew
+    regularFont = pw.Font.ttf(await rootBundle.load('assets/NotoSansHebrew-Regular.ttf'));
+    boldFont = pw.Font.ttf(await rootBundle.load('assets/NotoSansHebrew-Bold.ttf'));
+    textDirection = pw.TextDirection.rtl;
+  } else {
+    regularFont = pw.Font.helvetica();
+    boldFont = pw.Font.helveticaBold();
+  }
+
+  final List<String> paragraphs = _generatedLawsuit.split('\n\n');
+  final List<pw.Widget> content = [];
+
+  for (String paragraph in paragraphs) {
+    if (paragraph.startsWith('## ')) {
+      content.add(pw.Header(
+        level: 1,
+        child: pw.Text(paragraph.substring(3),
+            style: pw.TextStyle(font: boldFont, fontSize: 18)),
+      ));
+    } else if (paragraph.startsWith('### ')) {
+      content.add(pw.Header(
+        level: 2,
+        child: pw.Text(paragraph.substring(4),
+            style: pw.TextStyle(font: boldFont, fontSize: 16)),
+      ));
+    } else if (paragraph.startsWith('#### ')) {
+      content.add(pw.Header(
+        level: 3,
+        child: pw.Text(paragraph.substring(5),
+            style: pw.TextStyle(font: boldFont, fontSize: 14)),
+      ));
+    } else {
+     content.add(pw.RichText(
+  text: pw.TextSpan(
+    children: _parseTextWithBoldSectionsForPDF(paragraph, regularFont, boldFont),
+    style: pw.TextStyle(font: regularFont, fontSize: 12),
+  ),
+));
+
+    }
   }
 
   pdf.addPage(
-    pw.Page(
-      build: (pw.Context context) => pw.Padding(
-        padding: const pw.EdgeInsets.all(16.0),
-        child: pw.Text(
-          _generatedLawsuit,
-          textDirection: textDirection,
-          style: font != null ? pw.TextStyle(font: font) : const pw.TextStyle(),
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      build: (pw.Context context) => [
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: content,
         ),
-      ),
+      ],
+      textDirection: textDirection,
     ),
   );
 
@@ -186,6 +223,31 @@ void _downloadLawsuitAsPDF() async {
   );
 }
   
+
+  List<pw.TextSpan> _parseTextWithBoldSectionsForPDF(String text, pw.Font regularFont, pw.Font boldFont) {
+  final RegExp boldPattern = RegExp(r'\*\*(.*?)\*\*');
+  List<pw.TextSpan> spans = [];
+  int lastIndex = 0;
+
+  for (Match match in boldPattern.allMatches(text)) {
+    if (match.start > lastIndex) {
+      spans.add(pw.TextSpan(text: text.substring(lastIndex, match.start), style: pw.TextStyle(font: regularFont)));
+    }
+    spans.add(pw.TextSpan(
+      text: match.group(1),
+      style: pw.TextStyle(font: boldFont),
+    ));
+    lastIndex = match.end;
+  }
+
+  if (lastIndex < text.length) {
+    spans.add(pw.TextSpan(text: text.substring(lastIndex), style: pw.TextStyle(font: regularFont)));
+  }
+
+  return spans;
+}
+
+
 
   void _fillExampleData(BuildContext context,String? selectedName) {
   final examples = getExamples(context);

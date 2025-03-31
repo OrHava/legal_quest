@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:pdf/pdf.dart';
 import 'dart:convert';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -46,123 +47,281 @@ String? _selectedExample;
     }
     return null;
   }
+Future<void> _generateContract(BuildContext context) async {
+  if (!_formKey.currentState!.validate()) return;
 
+  setState(() {
+    _isLoading = true;
+  });
 
-  Future<void> _generateContract(BuildContext context) async {
-    if (!_formKey.currentState!.validate()) return;
+  Locale currentLocale = Localizations.localeOf(context); // Get the current locale
 
-    setState(() {
-      _isLoading = true;
-    });
+  try {
+    // Prepare the complete contract content in one request
+    final response = await http.post(
+      Uri.parse('https://api.openai.com/v1/chat/completions'),
+      headers: {
+        'Authorization': 'Bearer $mySecretKey', // Ensure Bearer is included
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: utf8.encode(jsonEncode({
+        'model': 'gpt-3.5-turbo',
+        'messages': [
+          {
+            'role': 'system',
+            'content': 'You are a detailed and precise assistant that generates comprehensive contracts with legal and operational clarity in ${currentLocale.languageCode}. Generate a complete contract that includes all essential elements for enforceability, such as offer, acceptance, consideration, capacity, legality, and additional clauses. Ensure it is at least 5 pages long and elaborate on each topic thoroughly with examples and detailed explanations.'
+          },
+          {
+            'role': 'user',
+            'content': _buildCompleteContract(locale: currentLocale.languageCode)
+          },
+        ],
+        'max_tokens': 4096, // Increased max tokens for longer responses
+      })),
+    );
 
-    try {
-      final response = await http.post(
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-        headers: {
-          'Authorization': 'Bearer $mySecretKey', // Ensure Bearer is included
-          'Content-Type': 'application/json; charset=utf-8',
-        },
-       body: utf8.encode(jsonEncode({
-  'model': 'gpt-3.5-turbo',
-  'messages': [
-    {
-      'role': 'system',
-      'content': 'You are a helpful assistant that generates contracts.'
-    },
-    {
-      'role': 'user',
-      'content': _buildPrompt()
-    },
-  ],
-  'max_tokens': 1000,
-})),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
-        setState(() {
-          _generatedContract = data['choices'][0]['message']['content'];
-        });
-      } else {
-        throw Exception('Failed to generate contract: ${response.body}');
-      }
-    } catch (e) {
-      if (context.mounted) {
-        _showErrorSnackBar(context, 'Error: $e');
-      }
-    } finally {
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
       setState(() {
-        _isLoading = false;
+        _generatedContract = data['choices'][0]['message']['content'];
       });
+    } else {
+      throw Exception('Failed to generate contract: ${response.body}');
     }
+  } catch (e) {
+    if (context.mounted) {
+      _showErrorSnackBar(context, 'Error: $e');
+    }
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
   }
+}
+String _buildCompleteContract({required String locale}) {
 
-  String _buildPrompt() {
-    return '''
-  ${S.of(context).generate_contract_prompt}
 
-${S.of(context).party_a}
-- ${S.of(context).name} ${_partyANameController.text}
-- ${S.of(context).id} ${_partyAIdController.text}
+  return '''  Make sure this contract will be in the language of $locale
+This contract serves as a comprehensive agreement between the parties involved. It outlines all essential elements for enforceability such as offer, acceptance, consideration, capacity, legality, and additional clauses. The document is structured to cover each topic in detail.
 
-${S.of(context).party_b}
-- ${S.of(context).name} ${_partyBNameController.text}
-- ${S.of(context).id} ${_partyBIdController.text}
+**Contract Details:**
 
-${S.of(context).subject_of_contract}
-${_contractSubjectController.text}
+1. **Parties Involved:**
+   - **Party A**:
+     - Name: ${_partyANameController.text}
+     - ID: ${_partyAIdController.text}
+   - **Party B**:
+     - Name: ${_partyBNameController.text}
+     - ID: ${_partyBIdController.text}
 
-${S.of(context).details}
-${_detailsController.text}
+2. **Subject of Contract**:
+   This section explains the purpose of the contract in detail.
+   - Subject: ${_contractSubjectController.text}
+   - Please elaborate on the significance of this subject matter and how it relates to both parties.
 
-${S.of(context).ensure_contract}
+3. **Details**:
+   A comprehensive explanation of the specifics of the agreement.
+   - Details: ${_detailsController.text}
+   - Provide an in-depth description of the agreement's specifics, including any relevant background information.
+
+4. **Terms and Conditions**:
+   Elaborate on the rights and obligations of each party.
+   - Payment Terms: Describe how payments will be made, including amounts, due dates, and methods of payment.
+     - Please provide detailed examples and scenarios regarding payment processes.
+   - Delivery Details: Specify how goods or services will be delivered, including timelines and responsibilities.
+     - Elaborate on delivery expectations and responsibilities for both parties.
+   - Additional Conditions: Include any other relevant conditions that govern the agreement.
+     - Discuss any contingencies or special circumstances that may apply.
+
+5. **Definitions**:
+   Provide clear definitions for key terms used throughout the contract to ensure clarity.
+   - Example Definitions: Include specific examples of terms that might be ambiguous or require clarification.
+     - Please elaborate on each term's importance and its implications in this contract context.
+
+6. **Confidentiality Clause**:
+   Outline how confidential information will be handled by both parties.
+   - Define what constitutes confidential information and the obligations of both parties regarding its protection.
+     - Elaborate on potential risks associated with confidentiality breaches.
+
+7. **Dispute Resolution**:
+   Specify how disputes will be resolved (e.g., mediation, arbitration), including examples of scenarios where this may apply.
+   - Describe the process for initiating a dispute resolution procedure and any timelines involved.
+     - Provide examples of common disputes that may arise and how they should be handled.
+
+8. **Governing Law**:
+   State which jurisdiction's laws will govern this contract.
+   - Explain why this jurisdiction is chosen and its relevance to both parties.
+     - Discuss potential legal implications based on this jurisdiction.
+
+9. **Amendments**:
+   Describe how amendments to the contract can be made.
+   - Include procedures for proposing changes and obtaining consent from both parties.
+     - Elaborate on the importance of formalizing amendments and potential consequences of informal changes.
+
+10. **Termination Clause**:
+    Detail the conditions under which either party can terminate the contract.
+    - Specify notice periods and any obligations upon termination.
+      - Discuss scenarios that may lead to termination and their implications.
+
+11. **Liability Limitations**:
+    Specify any limitations on liability for both parties.
+    - Discuss scenarios where liability may be limited or excluded entirely.
+      - Provide examples of situations where liability limitations would apply.
+
+12. **Force Majeure**:
+    Include provisions for unforeseen circumstances that may prevent fulfillment of the contract.
+    - Define what constitutes a force majeure event and its implications for both parties.
+      - Elaborate on historical examples where force majeure has been invoked.
+
+13. **Indemnification Clause**:
+    Outline how one party will compensate the other for certain losses or damages incurred due to specific events related to this agreement.
+    - Discuss scenarios where indemnification would apply and its importance in protecting against liabilities.
+
+14. **Intellectual Property (IP) Rights**:
+    Specify ownership rights regarding any intellectual property created during the course of this agreement.
+    - Explain how IP rights will be managed between parties, including usage rights after termination.
+
+15. **Non-Compete Clause**:
+    Restrict one party from engaging in competing activities for a specified period after termination of this contract.
+    - Discuss the rationale behind non-compete agreements and their enforceability.
+
+16. **Data Protection and Privacy Clause**:
+    Ensure compliance with data protection laws regarding personal data shared between parties during the contract period.
+    - Elaborate on obligations related to data handling, storage, and processing.
+
+17. **Change Control Clause**:
+    Outline procedures for making modifications to this contract, ensuring all changes are mutually agreed upon and documented.
+    - Discuss potential impacts of changes on project timelines or deliverables.
+
+18. **Miscellaneous Provisions**:
+    Any other relevant clauses that may apply to this agreement, such as assignment rights or entire agreement clauses.
+    - Include provisions regarding assignment of rights, entire agreement clauses, or waiver of rights.
+
+19. **Signatures**:
+
+- **Party A Signature:** ____________________________  
+- **Date:** ________________
+
+- **Party B Signature:** ____________________________  
+- **Date:** ________________
+
+This contract is executed as of [Execution Date].
 ''';
-  }
+}
+
+
+
 void _downloadContractAsPDF() async {
   if (_generatedContract.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('No contract to download'), // Replace with localization if needed
+        content: Text('No contract to download'),
         backgroundColor: Colors.orange,
       ),
     );
     return;
   }
 
-  // Function to check if the text contains Hebrew characters
   bool isHebrew(String text) {
     return RegExp(r'[\u0590-\u05FF]').hasMatch(text);
   }
 
-  // Load Hebrew font only if necessary
   final pdf = pw.Document();
-  pw.Font? font;
+  pw.Font? regularFont;
+  pw.Font? boldFont;
   pw.TextDirection textDirection = pw.TextDirection.ltr;
 
+  // Load fonts based on language direction
   if (isHebrew(_generatedContract)) {
-      font = pw.Font.ttf(await rootBundle.load('assets/NotoSansHebrew-Regular.ttf'));
-    textDirection = pw.TextDirection.rtl; // Set text direction to RTL for Hebrew
+    regularFont = pw.Font.ttf(await rootBundle.load('assets/NotoSansHebrew-Regular.ttf'));
+    boldFont = pw.Font.ttf(await rootBundle.load('assets/NotoSansHebrew-Bold.ttf'));
+    textDirection = pw.TextDirection.rtl;
+  } else {
+    regularFont = pw.Font.helvetica();
+    boldFont = pw.Font.helveticaBold();
   }
 
-  pdf.addPage(
-    pw.Page(
-      build: (pw.Context context) => pw.Padding(
-        padding: const pw.EdgeInsets.all(16.0),
-        child: pw.Text(
-          _generatedContract,
-          textDirection: textDirection,
-          style: font != null ? pw.TextStyle(font: font) : const pw.TextStyle(),
+  // Split the contract into paragraphs
+  final List<String> paragraphs = _generatedContract.split('\n\n');
+  final List<pw.Widget> content = [];
+
+  // Process each paragraph for formatting
+  for (String paragraph in paragraphs) {
+    if (paragraph.startsWith('## ')) {
+      content.add(pw.Header(
+        level: 1,
+        child: pw.Text(paragraph.substring(3),
+            style: pw.TextStyle(font: boldFont, fontSize: 18)),
+      ));
+      content.add(pw.SizedBox(height: 12)); // Add space after header
+    } else if (paragraph.startsWith('### ')) {
+      content.add(pw.Header(
+        level: 2,
+        child: pw.Text(paragraph.substring(4),
+            style: pw.TextStyle(font: boldFont, fontSize: 16)),
+      ));
+      content.add(pw.SizedBox(height: 10)); // Add space after header
+    } else if (paragraph.startsWith('#### ')) {
+      content.add(pw.Header(
+        level: 3,
+        child: pw.Text(paragraph.substring(5),
+            style: pw.TextStyle(font: boldFont, fontSize: 14)),
+      ));
+      content.add(pw.SizedBox(height: 8)); // Add space after header
+    } else {
+      content.add(pw.RichText(
+        text: pw.TextSpan(
+          children: _parseTextWithBoldSectionsForPDF(paragraph, regularFont, boldFont),
+          style: pw.TextStyle(font: regularFont, fontSize: 12),
         ),
-      ),
+      ));
+      content.add(pw.SizedBox(height: 12)); // Add space after paragraph
+    }
+  }
+
+  // Create the PDF page with proper margins
+  pdf.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4.copyWith(marginTop: 20), // Set margins for the page
+      build: (pw.Context context) => [
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: content,
+        ),
+      ],
+      textDirection: textDirection,
     ),
   );
 
+  // Share the generated PDF
   await Printing.sharePdf(
     bytes: await pdf.save(),
     filename: 'contract.pdf',
   );
 }
 
+List<pw.TextSpan> _parseTextWithBoldSectionsForPDF(String text, pw.Font regularFont, pw.Font boldFont) {
+  final RegExp boldPattern = RegExp(r'\*\*(.*?)\*\*');
+  List<pw.TextSpan> spans = [];
+  int lastIndex = 0;
+
+  for (Match match in boldPattern.allMatches(text)) {
+    if (match.start > lastIndex) {
+      spans.add(pw.TextSpan(text: text.substring(lastIndex, match.start), style: pw.TextStyle(font: regularFont)));
+    }
+    spans.add(pw.TextSpan(
+      text: match.group(1),
+      style: pw.TextStyle(font: boldFont),
+    ));
+    lastIndex = match.end;
+  }
+
+  if (lastIndex < text.length) {
+    spans.add(pw.TextSpan(text: text.substring(lastIndex), style: pw.TextStyle(font: regularFont)));
+  }
+
+  return spans;
+}
 
 List<Map<String, String>> getExamples(BuildContext context) {
     return [
@@ -710,6 +869,8 @@ Widget _buildGenerateButton(BuildContext context) {
       ],
     );
   }
+
+  
 
 }
 

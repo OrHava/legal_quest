@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -62,68 +63,49 @@ List<Map<String, String>> getExamples(BuildContext context) {
     });
   }
 
-  String _buildPrompt() {
-    return '''
-${S.of(context).write_defense}
+Future<void> _generateDefense(BuildContext context) async {
+  if (!_formKey.currentState!.validate()) return;
 
+  setState(() {
+    _isLoading = true;
+  });
 
-${S.of(context).defender_name}:
-- ${S.of(context).name}: ${_defenderNameController.text}
-- ${S.of(context).id}: ${_defenderIdController.text}
+  Locale currentLocale = Localizations.localeOf(context); // Get the current locale
 
-${S.of(context).offense_details}:
-${_offenseDetailsController.text}
+  try {
+    // Prepare the complete defense content in one request
+    final response = await http.post(
+      Uri.parse('https://api.openai.com/v1/chat/completions'),
+      headers: {
+        'Authorization': 'Bearer $mySecretKey', // Ensure Bearer is included
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: utf8.encode(jsonEncode({
+        'model': 'gpt-3.5-turbo',
+        'messages': [
+          {
+            'role': 'system',
+            'content': 'You are an expert assistant in writing persuasive and professional defense statements in ${currentLocale.languageCode}. Focus on presenting logical arguments, mitigating accusations, and emphasizing the defendant’s strengths. Ensure it is detailed and convincing.'
+          },
+          {
+            'role': 'user',
+            'content': _buildCompleteDefense(locale: currentLocale.languageCode),
+          },
+        ],
+        'max_tokens': 4096, // Increased max tokens for longer responses
+      })),
+    );
 
-${S.of(context).defense_details}:
-${_defenseDetailsController.text}
-
-${S.of(context).additional_notes}:
-${_additionalNotesController.text}
-
-${S.of(context).ensure_defense}
-''';
-  }
-
-  Future<void> _generateDefense(BuildContext context) async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final response = await http.post(
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-        headers: {
-          'Authorization': 'Bearer $mySecretKey', // Replace with your actual key
-         'Content-Type': 'application/json; charset=utf-8',
-        },
-           body: utf8.encode(jsonEncode({
-          'model': 'gpt-3.5-turbo',
-          'messages': [
-            {
-              'role': 'system',
-              'content': 'You are an expert assistant in writing persuasive defense statements.'
-            },
-            {
-              'role': 'user',
-              'content': _buildPrompt()
-            },
-          ],
-          'max_tokens': 1000,
-       })),
-      );
-
-      if (response.statusCode == 200) {
-           final data = jsonDecode(utf8.decode(response.bodyBytes));
-        setState(() {
-          _generatedDefense = data['choices'][0]['message']['content'];
-        });
-      } else {
-        throw Exception('Failed to generate defense: ${response.body}');
-      }
-    } catch (e) {
-      if (context.mounted) {
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      setState(() {
+        _generatedDefense = data['choices'][0]['message']['content'];
+      });
+    } else {
+      throw Exception('Failed to generate defense: ${response.body}');
+    }
+  } catch (e) {
+    if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
@@ -131,48 +113,106 @@ ${S.of(context).ensure_defense}
           ),
         );
       }
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
   }
+}
+
+String _buildCompleteDefense({required String locale}) {
+  return '''
+This defense statement is presented in the language of $locale.
+
+**Defender Details:**
+- **Name:** ${_defenderNameController.text}
+- **ID:** ${_defenderIdController.text}
+
+**Offense Details:**
+${_offenseDetailsController.text}
+
+**Defense Details:**
+${_defenseDetailsController.text}
+
+**Additional Notes:**
+${_additionalNotesController.text}
+
+Ensure that the defense is persuasive, focuses on logical arguments, and mitigates the impact of the accusations. Highlight the defender's positive traits, achievements, and actions to strengthen their position.
+''';
+}
+
 void _downloadDefenseAsPDF() async {
   if (_generatedDefense.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('No contract to download'), // Replace with localization if needed
+        content: Text('No contract to download'),
         backgroundColor: Colors.orange,
       ),
     );
     return;
   }
 
-  // Function to check if the text contains Hebrew characters
   bool isHebrew(String text) {
     return RegExp(r'[\u0590-\u05FF]').hasMatch(text);
   }
 
-  // Load Hebrew font only if necessary
   final pdf = pw.Document();
-  pw.Font? font;
+  pw.Font? regularFont;
+  pw.Font? boldFont;
   pw.TextDirection textDirection = pw.TextDirection.ltr;
 
   if (isHebrew(_generatedDefense)) {
-      font = pw.Font.ttf(await rootBundle.load('assets/NotoSansHebrew-Regular.ttf'));
-    textDirection = pw.TextDirection.rtl; // Set text direction to RTL for Hebrew
+    regularFont = pw.Font.ttf(await rootBundle.load('assets/NotoSansHebrew-Regular.ttf'));
+    boldFont = pw.Font.ttf(await rootBundle.load('assets/NotoSansHebrew-Bold.ttf'));
+    textDirection = pw.TextDirection.rtl;
+  } else {
+    regularFont = pw.Font.helvetica();
+    boldFont = pw.Font.helveticaBold();
+  }
+
+  final List<String> paragraphs = _generatedDefense.split('\n\n');
+  final List<pw.Widget> content = [];
+
+  for (String paragraph in paragraphs) {
+    if (paragraph.startsWith('## ')) {
+      content.add(pw.Header(
+        level: 1,
+        child: pw.Text(paragraph.substring(3),
+            style: pw.TextStyle(font: boldFont, fontSize: 18)),
+      ));
+    } else if (paragraph.startsWith('### ')) {
+      content.add(pw.Header(
+        level: 2,
+        child: pw.Text(paragraph.substring(4),
+            style: pw.TextStyle(font: boldFont, fontSize: 16)),
+      ));
+    } else if (paragraph.startsWith('#### ')) {
+      content.add(pw.Header(
+        level: 3,
+        child: pw.Text(paragraph.substring(5),
+            style: pw.TextStyle(font: boldFont, fontSize: 14)),
+      ));
+    } else {
+     content.add(pw.RichText(
+  text: pw.TextSpan(
+    children: _parseTextWithBoldSectionsForPDF(paragraph, regularFont, boldFont),
+    style: pw.TextStyle(font: regularFont, fontSize: 12),
+  ),
+));
+
+    }
   }
 
   pdf.addPage(
-    pw.Page(
-      build: (pw.Context context) => pw.Padding(
-        padding: const pw.EdgeInsets.all(16.0),
-        child: pw.Text(
-          _generatedDefense,
-          textDirection: textDirection,
-          style: font != null ? pw.TextStyle(font: font) : const pw.TextStyle(),
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      build: (pw.Context context) => [
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: content,
         ),
-      ),
+      ],
+      textDirection: textDirection,
     ),
   );
 
@@ -182,6 +222,28 @@ void _downloadDefenseAsPDF() async {
   );
 }
   
+List<pw.TextSpan> _parseTextWithBoldSectionsForPDF(String text, pw.Font regularFont, pw.Font boldFont) {
+  final RegExp boldPattern = RegExp(r'\*\*(.*?)\*\*');
+  List<pw.TextSpan> spans = [];
+  int lastIndex = 0;
+
+  for (Match match in boldPattern.allMatches(text)) {
+    if (match.start > lastIndex) {
+      spans.add(pw.TextSpan(text: text.substring(lastIndex, match.start), style: pw.TextStyle(font: regularFont)));
+    }
+    spans.add(pw.TextSpan(
+      text: match.group(1),
+      style: pw.TextStyle(font: boldFont),
+    ));
+    lastIndex = match.end;
+  }
+
+  if (lastIndex < text.length) {
+    spans.add(pw.TextSpan(text: text.substring(lastIndex), style: pw.TextStyle(font: regularFont)));
+  }
+
+  return spans;
+}
 
   String? _requiredValidator(String? value) {
     if (value == null || value.isEmpty) {
